@@ -6,3 +6,5 @@ pkg
 src
 tlp.install
 *.zst
+/compile_commands.json
+/.cache

@@ -82,12 +82,17 @@ INFILES = \
 	tlp-rdw \
 	tlp-rf \
 	tlp.rules \
-	tlp-readconfs \
 	tlp-run-on \
 	tlp.service \
 	tlp-stat \
 	tlp.upstart \
 	tlp-usb-udev
+
+CCFILES = \
+	tlp-readconfs \
+	tlp-pcilist \
+	tlp-usblist \
+	tpacpi-bat
 
 MANFILES1 = \
 	bluetooth.1 \
@@ -122,21 +127,43 @@ SHFILES = \
 	unit-tests/test-func \
 	unit-tests/test-cpufreq.sh
 
-PLFILES = \
-	tlp-pcilist \
-	tlp-readconfs.in \
-	tlp-usblist
-
 BATDRVFILES = $(foreach drv,$(wildcard bat.d/[0-9][0-9]-[a-z]*),$(drv)~)
 
+OCFLAGS := -Wall -Wextra -pedantic -std=c11
+
+PKG_CONFIG ?= pkg-config
+LIBPCI  ?= $(shell $(PKG_CONFIG) --libs --cflags libpci)
+LIBUSB  ?= $(shell $(PKG_CONFIG) --libs --cflags libusb-1.0)
+LIBKMOD ?= $(shell $(PKG_CONFIG) --libs --cflags libkmod)
+LIBUDEV ?= $(shell $(PKG_CONFIG) --libs --cflags libudev)
+
 # Make targets
-all: $(INFILES)
+all: $(INFILES) $(CCFILES)
+
+tlp-pcilist: tlp-pcilist.c
+	$(CC) $(CFLAGS) $(OCFLAGS) $(LDFLAGS) $^ $(LIBPCI) -o $@
+
+tlp-usblist: tlp-usblist.c
+	$(CC) $(CFLAGS) $(OCFLAGS) $(LDFLAGS) $^ $(LIBUSB) $(LIBUDEV) -o $@
+
+tpacpi-bat: tpacpi-bat.c
+	$(CC) $(CFLAGS) $(OCFLAGS) $(LDFLAGS) $^ $(LIBKMOD) -o $@
+
+tlp-readconfs: tlp-readconfs.c
+	$(CC) $(CFLAGS) $(OCFLAGS) '-DCONF_USR="$(TLP_CONFUSR)"' \
+		'-DCONF_DIR="$(TLP_CONFDIR)"' '-DCONF_DEF="$(TLP_CONFDEF)"' \
+		'-DCONF_REN="$(TLP_CONFREN)"' '-DCONF_DPR="$(TLP_CONFDPR)"' \
+		'-DCONF_OLD="$(TLP_CONF)"' $(LDFLAGS) $^ -o $@
+
+compile_commands.json: $(CCFILES:=.c)
+	rm -f $(CCFILES)
+	bear -- $(MAKE) $(MAKEFLAGS) $(CCFILES)
 
 $(INFILES): %: %.in
 	$(SED) $< > $@
 
 clean:
-	rm -f $(INFILES)
+	rm -f $(INFILES) $(CCFILES)
 	rm -f bat.d/*~
 
 install-tlp: all
@@ -277,7 +304,7 @@ uninstall: uninstall-tlp uninstall-rdw
 
 uninstall-man: uninstall-man-tlp uninstall-man-rdw
 
-checkall: checkbashisms shellcheck perlcritic checkdupconst checkbatdrv checkwip
+checkall: checkbashisms shellcheck clangtidy checkdupconst checkbatdrv checkwip
 
 checkbashisms:
 	@echo "*** checkbashisms ***************************************************************************"
@@ -287,9 +314,9 @@ shellcheck:
 	@echo "*** shellcheck ******************************************************************************"
 	@shellcheck -s dash $(SHFILES) || true
 
-perlcritic:
-	@echo "*** perlcritic ******************************************************************************"
-	@perlcritic --severity 4 --verbose "%F: [%p] %m at line %l, column %c.  (Severity: %s)\n" $(PLFILES) || true
+clangtidy:
+	@echo "*** clangtidy *******************************************************************************"
+	@clang-tidy --quiet $(CCFILES:=.c) || true
 
 checkdupconst:
 	@echo "*** checkdupconst ***************************************************************************"
@@ -297,7 +324,8 @@ checkdupconst:
 
 checkwip:
 	@echo "*** checkwip ********************************************************************************"
-	@grep -E -n "### (DEBUG|DEVEL|TODO|WIP)" $(SHFILES) $(PLFILES) || true
+	@grep -E -n "### (DEBUG|DEVEL|TODO|WIP)" $(SHFILES) || true
+	@grep -E -n "(/(/|\*\*?)|\*) (DEBUG|DEVEL|TODO|WIP)" $(CCFILES:=.c) || true
 
 bat.d/TEMPLATE~: bat.d/TEMPLATE
 	@awk '/^batdrv_[a-z_]+ ()/ { print $$1; }' $< | grep -v 'batdrv_is' | sort > $@
