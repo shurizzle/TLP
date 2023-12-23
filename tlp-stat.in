@@ -561,7 +561,7 @@ if [ "$show_temp" = "1" ] || [ "$show_all" = "1" ]; then
             [ "$ctemp" -gt "$cmax" ] && cmax=$ctemp
         done
         if [ "$cmax" -gt 0 ]; then
-            perl -e 'printf ("CPU temp               = %5d [°C]\n", '"$cmax"' / 1000.0);'
+            printf 'CPU temp               = %5d [°C]\n' $((cmax / 1000))
             tempshown=1
         fi
     elif [ -d "$ACPITEMP_DIR" ] && [ "$X_IGNORE_ACPITEMP" != "1" ]; then
@@ -575,7 +575,7 @@ if [ "$show_temp" = "1" ] || [ "$show_all" = "1" ]; then
             fi
         done
         if [ "$cmax" -gt 0 ]; then
-            perl -e 'printf ("CPU temp               = %5d [°C]\n", '"$cmax"' / 1000.0);'
+            printf 'CPU temp               = %5d [°C]\n' $((cmax / 1000))
             tempshown=1
         fi
     fi

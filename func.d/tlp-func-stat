@@ -34,7 +34,7 @@ check_openrc () {
 }
 
 check_ac_quirk () { # check for hardware known not to expose AC device
-                    # $1: model string; rc: 0=yes, 1=no
+    # $1: model string; rc: 0=yes, 1=no
     printf '%s' "$1" | grep -E -q "${RE_AC_QUIRK}"
 }
 
@@ -97,7 +97,7 @@ printparm_epb () {
                                      s/^6/default/;
                                      s/^8/balance_power/;
                                      s/^15/power/;
-                                     s/[0-9]+//')
+        s/[0-9]+//')
         if [ -n "$strval" ]; then
             printf "(%s) [EPB]\n" "$strval"
         else
@@ -156,7 +156,7 @@ print_sysf_trim () {
     local val
 
     if val=$(read_sysf "$2"); then
-         # sysfile readable
+        # sysfile readable
         # shellcheck disable=SC2059
         printf "$1" "$(printf "%s" "$val" | sed -r 's/^[[:blank:]]*//;s/[[:blank:]]*$//')"
     else
@@ -216,7 +216,7 @@ print_selinux () {
     # print SELinux status and mode
     if cmd_exists $SESTATUS; then
         $SESTATUS | awk -F '[ \t\n]+' '/SELinux status:/ { printf "SELinux status = %s", $3 } ; \
-                                       /Current mode:/   { printf " (%s)", $3 }'
+            /Current mode:/   { printf " (%s)", $3 }'
         printf "\n"
     fi
 }
@@ -228,7 +228,7 @@ print_disk_model () {
     local model vendor
 
     model=$($HDPARM -I "/dev/$1" 2> /dev/null | grep 'Model Number' | \
-      cut -f2 -d: | sed -r 's/^ *//' )
+        cut -f2 -d: | sed -r 's/^ *//' )
 
     if [ -z "$model" ]; then
         # hdparm -I not supported --> try udevadm approach
@@ -247,7 +247,7 @@ print_disk_firmware () {
     local firmware
 
     firmware=$($HDPARM -I "/dev/$1" 2> /dev/null | grep 'Firmware Revision' | \
-      cut -f2 -d: | sed -r 's/^ *//' )
+        cut -f2 -d: | sed -r 's/^ *//' )
     printf '%s\n' "${firmware:-unknown}"
 
     return 0
@@ -266,7 +266,7 @@ get_disk_apm_level () {
     local apm
 
     apm=$($HDPARM -I "/dev/$1" 2> /dev/null | grep 'Advanced power management level' | \
-          cut -f2 -d: | grep -E '^ *[0-9]+ *$')
+        cut -f2 -d: | grep -E '^ *[0-9]+ *$')
     if [ -n "$apm" ]; then
         return "$apm"
     else
@@ -344,7 +344,7 @@ print_nvme_temp () {
     # temp1_input is "Composite"
     for sens in $(glob_files '/hwmon*/temp1_input' "/sys/block/$1/device"); do
         if ts=$(read_sysval "$sens"); then
-            perl -e 'printf ("  Temp       = %-2.0f °C\n", '"$ts"' / 1000.0);'
+            printf '  Temp       = %-2d °C\n' $((ts / 1000))
             break
         fi
     done
@@ -367,7 +367,7 @@ anonymize_disk_id () {
                     i--
                 }
                 print s
-            }'
+        }'
     fi
 }
 
@@ -464,8 +464,8 @@ show_disk_data () {
         echo
         # shellcheck disable=SC2154
         case "$_disk_runpm" in
-            0) printf "  Runtime PM:\n";;
-            1) printf "  Runtime PM: locked by kernel\n";;
+            0) printf "  Runtime PM:\n" ;;
+            1) printf "  Runtime PM: locked by kernel\n" ;;
             2) printf "  Runtime PM: locked by TLP\n" ;;
         esac
         print_sysf "    /sys/block/$_disk_dev/device/power/control = %s, " "/sys/block/$_disk_dev/device/power/control"
@@ -482,9 +482,9 @@ show_disk_data () {
             printf "\n  SMART info:\n"
             $SMARTCTL -A "/dev/$_disk_dev" | \
                 grep -E -e '^(Critical Warning|Temperature:|Available Spare)' \
-                        -e '^(Percentage Used:|Data Units Written:|Power|Unsafe)' \
-                        -e 'Integrity Errors' | \
-                    sed 's/^/    /'
+                -e '^(Percentage Used:|Data Units Written:|Power|Unsafe)' \
+                -e 'Integrity Errors' | \
+                sed 's/^/    /'
             ;;
 
         sata|ata|usb)
@@ -509,7 +509,7 @@ show_disk_data () {
                           $2 ~ /NAND_Writes_1GiB/ \
                                 { printf "    %3d %-25s = %8d %s\n", $1, $2, $10, "[GB]" } ; \
                           $2 ~ /Available_Reservd_Space|Media_Wearout_Indicator|Wear_Leveling_Count/ \
-                                { printf "    %3d %-25s = %8d %s\n", $1, $2, $4, "[%]" }'
+                { printf "    %3d %-25s = %8d %s\n", $1, $2, $4, "[%]" }'
             ;;
 
         *) # unknown disk type

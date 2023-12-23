@@ -513,6 +513,8 @@ batdrv_show_battery_data () {
     local ed ef en
     local efsum=0
     local ensum=0
+    local crg_prc
+    local cap_prc
 
     for bat in $_batteries; do # iterate batteries
         batdrv_select_battery "$bat"
@@ -575,11 +577,13 @@ batdrv_show_battery_data () {
         # --- show charge level (SOC) and capacity
         lf=0
         if [ "$ef" -ne 0 ]; then
-            perl -e 'printf ("%-59s = %6.1f [%%]\n", "Charge",   100.0 * '"$en"' / '"$ef"');'
+            crg_prc=$((1000 * en / ef))
+            printf '%-59s = %6.1f [%%]\n' Charge "$((crg_prc / 10)).$((crg_prc % 10))"
             lf=1
         fi
         if [ "$ed" -ne 0 ]; then
-            perl -e 'printf ("%-59s = %6.1f [%%]\n", "Capacity", 100.0 * '"$ef"' / '"$ed"');'
+            cap_prc=$((1000 * ef / ed))
+            printf '%-59s = %6.1f [%%]\n' Capacity "$((cap_prc / 10)).$((cap_prc % 10))"
             lf=1
         fi
         [ "$lf" -gt 0 ] && printf "\n"
